@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
-set(LLVM_DIR "/usr/lib/llvm-3.4/")
 
 add_definitions(${CMAKE_CXX_FLAGS} -D__STDC_CONSTANT_MACROS)
 add_definitions(${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS)
