@@ -8,5 +8,5 @@
 
 llvm::Value *
 NumberNode::codegen(IRRenderer *renderer) {
-    return llvm::ConstantFP::get(renderer->llvm_context(), llvm::APFloat(val));
+    return llvm::ConstantFP::get(renderer->module->getContext(), llvm::APFloat(val));
 }

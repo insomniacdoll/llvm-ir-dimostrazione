@@ -1,4 +1,4 @@
-#include "llvm/Analysis/Verifier.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
@@ -18,7 +18,7 @@ FunctionNode::codegen(IRRenderer *renderer) {
     Function *func = proto->codegen(renderer);
     if ( func == 0 ) { return 0; }
 
-    BasicBlock *block = BasicBlock::Create(renderer->llvm_context(),
+    BasicBlock *block = BasicBlock::Create(func->getContext(),
                                            "entry",
                                            func);
     renderer->builder->SetInsertPoint(block);
@@ -28,8 +28,6 @@ FunctionNode::codegen(IRRenderer *renderer) {
     if ( Value *retval = body->codegen(renderer) ) {
         renderer->builder->CreateRet(retval);
         llvm::verifyFunction(*func);
-
-        renderer->pass_manager->run(*func);
 
         return func;
     }

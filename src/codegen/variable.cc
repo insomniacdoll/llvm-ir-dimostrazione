@@ -1,4 +1,5 @@
 #include "llvm/IR/Value.h"
+#include "llvm/IR/DerivedTypes.h"
 
 #include "ast/variable.h"
 #include "renderer.h"
@@ -12,5 +13,6 @@ VariableNode::codegen(IRRenderer *renderer) {
         return ErrorV("Unknown variable name");
     }
 
-    return renderer->builder->CreateLoad(val, name.c_str());
+    llvm::AllocaInst *alloca = llvm::cast<llvm::AllocaInst>(val);
+    return renderer->builder->CreateLoad(alloca->getAllocatedType(), val, name.c_str());
 }

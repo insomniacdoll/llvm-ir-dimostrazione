@@ -19,5 +19,5 @@ UnaryNode::codegen(IRRenderer *renderer) {
         return ErrorV("Unknown unary operator");
     }
 
-    return renderer->builder->CreateCall(func, operand_value, "unop");
+    return renderer->builder->CreateCall(func, {operand_value}, "unop");
 }

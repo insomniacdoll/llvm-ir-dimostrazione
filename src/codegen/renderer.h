@@ -1,13 +1,16 @@
 #pragma once
 
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <map>
+#include <memory>
 #include <string>
 
 using ::std::map;
@@ -15,12 +18,11 @@ using ::std::string;
 using ::std::unique_ptr;
 
 using ::llvm::AllocaInst;
-using ::llvm::ExecutionEngine;
 using ::llvm::Function;
-using ::llvm::FunctionPassManager;
-using ::llvm::IRBuilder;
 using ::llvm::LLVMContext;
 using ::llvm::Module;
+using ::llvm::IRBuilder;
+using ::llvm::orc::LLJIT;
 
 
 class IRRenderer {
@@ -36,10 +38,10 @@ public:
     IRRenderer();
     ~IRRenderer();
 
+    unique_ptr<LLVMContext> context;
     unique_ptr<Module> module;
-    unique_ptr<ExecutionEngine> engine;
+    unique_ptr<LLJIT> engine;
     unique_ptr<IRBuilder<> > builder;
-    unique_ptr<FunctionPassManager> pass_manager;
 
     LLVMContext &llvm_context();
 

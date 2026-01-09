@@ -1,28 +1,37 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.15)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "-stdlib=libc++")
 
-add_definitions(${CMAKE_CXX_FLAGS} -D__STDC_CONSTANT_MACROS)
-add_definitions(${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS)
-add_definitions(${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS)
+add_compile_definitions(__STDC_CONSTANT_MACROS)
+add_compile_definitions(__STDC_FORMAT_MACROS)
+add_compile_definitions(__STDC_LIMIT_MACROS)
 
-add_definitions(${CMAKE_CXX_FLAGS} -Wall)
-add_definitions(${CMAKE_CXX_FLAGS} -Wextra)
-add_definitions(${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -fvisibility-inlines-hidden")
 
 project(kscope)
 
-find_package(LLVM)
+find_package(LLVM REQUIRED CONFIG)
 
-if( NOT LLVM_FOUND )
-  message(FATAL_ERROR "LLVM package can't be found. Set CMAKE_PREFIX_PATH variable to LLVM's installation prefix.")
-endif()
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 include_directories( src ${LLVM_INCLUDE_DIRS} )
-link_directories( ${LLVM_LIBRARY_DIRS} )
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
 
 set(CMAKE_BUILD_TYPE Debug)
 
-llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES jit native)
+llvm_map_components_to_libnames(REQ_LLVM_LIBRARIES
+  orcjit
+  native
+  core
+  support
+  analysis
+  executionengine
+  target
+  passes
+)
 
 add_subdirectory(src)

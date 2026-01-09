@@ -36,7 +36,7 @@ BinaryNode::codegen(IRRenderer *renderer) {
 
     if (left == 0 || right == 0 ) { return 0; }
 
-    Type *llvm_double_type = Type::getDoubleTy(renderer->llvm_context());
+    Type *llvm_double_type = Type::getDoubleTy(renderer->module->getContext());
 
     switch (op) {
     case '+': return renderer->builder->CreateFAdd(left, right, "addtmp");

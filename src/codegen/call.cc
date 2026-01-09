@@ -14,7 +14,7 @@ CallNode::codegen(IRRenderer *renderer) {
         return ErrorV("Unknown function referenced");
     }
 
-    if ( callee_func->arg_size() != args.size() ) {
+    if ( callee_func->getFunctionType()->getNumParams() != args.size() ) {
         return ErrorV("Incorrect number of arguments passed");
     }
 

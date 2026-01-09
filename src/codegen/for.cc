@@ -30,7 +30,7 @@ ForNode::codegen(IRRenderer *renderer) {
 
     renderer->builder->CreateStore(start_value, alloca);
 
-    BasicBlock *loop_block = BasicBlock::Create(renderer->llvm_context(), "loop", func);
+    BasicBlock *loop_block = BasicBlock::Create(renderer->module->getContext(), "loop", func);
 
     renderer->builder->CreateBr(loop_block);
     renderer->builder->SetInsertPoint(loop_block);
@@ -45,23 +45,23 @@ ForNode::codegen(IRRenderer *renderer) {
         step_value = step->codegen(renderer);
         if ( step_value == 0 ) { return 0; }
     } else {
-        step_value = ConstantFP::get(renderer->llvm_context(), APFloat(1.0));
+        step_value = ConstantFP::get(renderer->module->getContext(), APFloat(1.0));
     }
 
     Value *end_condition = end->codegen(renderer);
     if ( end_condition == 0 ) { return 0; }
 
-    Value *current_var = renderer->builder->CreateLoad(alloca, var_name.c_str());
+    Value *current_var = renderer->builder->CreateLoad(alloca->getAllocatedType(), alloca, var_name.c_str());
     Value *next_var = renderer->builder->CreateFAdd(current_var, step_value, "nextvar");
     renderer->builder->CreateStore(next_var, alloca);
 
     end_condition = renderer->builder->CreateFCmpONE(
         end_condition,
-        ConstantFP::get(renderer->llvm_context(), APFloat(0.0)),
+        ConstantFP::get(renderer->module->getContext(), APFloat(0.0)),
         "loopcond"
     );
 
-    BasicBlock *after_block = BasicBlock::Create(renderer->llvm_context(), "afterloop", func);
+    BasicBlock *after_block = BasicBlock::Create(renderer->module->getContext(), "afterloop", func);
 
     renderer->builder->CreateCondBr(end_condition, loop_block, after_block);
     renderer->builder->SetInsertPoint(after_block);
@@ -72,5 +72,5 @@ ForNode::codegen(IRRenderer *renderer) {
         renderer->clear_named_value(var_name);
     }
 
-    return Constant::getNullValue(Type::getDoubleTy(renderer->llvm_context()));
+    return Constant::getNullValue(Type::getDoubleTy(renderer->module->getContext()));
 }

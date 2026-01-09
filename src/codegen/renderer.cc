@@ -1,5 +1,5 @@
-#include "llvm/Analysis/Passes.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -7,78 +7,81 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
-#include "llvm/PassManager.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Scalar.h"
 
 #include <string>
 
 #include "renderer.h"
 
 using ::llvm::AllocaInst;
-using ::llvm::CloneModule;
-using ::llvm::DataLayout;
-using ::llvm::ExecutionEngine;
 using ::llvm::Function;
-using ::llvm::FunctionPassManager;
 using ::llvm::IRBuilder;
 using ::llvm::LLVMContext;
 using ::llvm::Module;
 using ::llvm::Type;
+using ::llvm::orc::LLJIT;
 
 
-IRRenderer::IRRenderer()
-    : IRRenderer(new Module("my cool jit", llvm::getGlobalContext())) {}
+IRRenderer::IRRenderer() {
+    context = std::make_unique<LLVMContext>();
+    module = std::make_unique<Module>("my cool jit", *context);
+    builder = std::make_unique<IRBuilder<>>(*context);
+
+    auto jit_builder = llvm::orc::LLJITBuilder();
+    auto initResult = jit_builder.create();
+    if (auto err = initResult.takeError()) {
+        llvm::errs() << "Could not create LLJIT: " << err << "\n";
+        exit(1);
+    }
+
+    engine = std::move(initResult.get());
+}
 
 IRRenderer::IRRenderer(const IRRenderer &other)
-    : IRRenderer(CloneModule(other.module.get())) {}
+    : IRRenderer(llvm::CloneModule(*other.module).release()) {}
 
 IRRenderer::IRRenderer(Module *module)
-    : module(unique_ptr<Module>(module)),
-      engine(unique_ptr<ExecutionEngine>(ExecutionEngine::createJIT(module))),
-      builder(unique_ptr<IRBuilder<> >(new IRBuilder<>(module->getContext()))),
-      pass_manager(unique_ptr<FunctionPassManager>(new FunctionPassManager(module))) {
+    : context(std::make_unique<LLVMContext>()),
+      module(std::unique_ptr<Module>(module)),
+      builder(std::make_unique<IRBuilder<>>(*context)) {
 
-    pass_manager->add(new DataLayout(*engine->getDataLayout()));
-    pass_manager->add(llvm::createBasicAliasAnalysisPass());
-    pass_manager->add(llvm::createPromoteMemoryToRegisterPass());
-    pass_manager->add(llvm::createInstructionCombiningPass());
-    pass_manager->add(llvm::createReassociatePass());
-    pass_manager->add(llvm::createGVNPass());
-    pass_manager->add(llvm::createCFGSimplificationPass());
+    auto jit_builder = llvm::orc::LLJITBuilder();
+    auto initResult = jit_builder.create();
+    if (auto err = initResult.takeError()) {
+        llvm::errs() << "Could not create LLJIT: " << err << "\n";
+        exit(1);
+    }
 
-    pass_manager->doInitialization();
+    engine = std::move(initResult.get());
 }
 
 IRRenderer::IRRenderer(IRRenderer &&other) {
+    context = std::move(other.context);
     module = std::move(other.module);
     engine = std::move(other.engine);
     builder = std::move(other.builder);
-    pass_manager = std::move(other.pass_manager);
-    other.module = nullptr;
-    other.engine = nullptr;
-    other.builder = nullptr;
-    other.pass_manager = nullptr;
 }
 
 IRRenderer &
 IRRenderer::operator =(IRRenderer other) {
+    std::swap(context, other.context);
     std::swap(module, other.module);
     std::swap(engine, other.engine);
     std::swap(builder, other.builder);
-    std::swap(pass_manager, other.pass_manager);
     return *this;
 }
 
 IRRenderer::~IRRenderer() {
-    pass_manager.reset();
     builder.reset();
     engine.reset();
     module.reset();
+    context.reset();
 }
 
 llvm::LLVMContext &
-IRRenderer::llvm_context() { return module->getContext(); }
+IRRenderer::llvm_context() { return *context; }
 
 llvm::AllocaInst *
 IRRenderer::get_named_value (const std::string &name){
