@@ -21,3 +21,11 @@ add_library(parsing
   ${PARSING_SOURCES}
   ${BISON_parser_OUTPUTS}
   ${FLEX_lexer_OUTPUTS})
+
+# Disable unused-but-set-variable warning for Bison-generated file
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/bison_parser.cc PROPERTIES
+  COMPILE_FLAGS "-Wno-unused-but-set-variable")
+
+# Disable sign-compare warning for Flex-generated file
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/flex_lexer.cc PROPERTIES
+  COMPILE_FLAGS "-Wno-sign-compare")

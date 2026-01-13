@@ -4,7 +4,7 @@
 %verbose
 
 %defines
-%define parser_class_name {Parser}
+%define api.parser.class {Parser}
 %define api.namespace {bison}
 
 %code requires{
