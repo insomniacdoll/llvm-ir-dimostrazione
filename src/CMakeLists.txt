@@ -14,12 +14,24 @@ add_executable(kscope ${KSCOPE_SOURCES})
 target_link_libraries(kscope_codegen ast)
 target_link_libraries(parsing ast)
 
-# 使用链接器组确保相互依赖的库正确链接
-target_link_libraries(kscope 
-    -Wl,--start-group
-    ast 
-    kscope_codegen 
-    parsing 
-    ${REQ_LLVM_LIBRARIES}
-    -Wl,--end-group
-)
+# Platform-specific linking to handle circular dependencies
+if(UNIX AND NOT APPLE)
+  # Use linker groups for Linux to handle circular dependencies
+  target_link_libraries(kscope 
+      -Wl,--start-group
+      ast 
+      kscope_codegen 
+      parsing 
+      ${REQ_LLVM_LIBRARIES}
+      -Wl,--end-group
+  )
+else()
+  # For macOS and other platforms, use standard linking
+  # The order may need adjustment based on actual dependencies
+  target_link_libraries(kscope 
+      ast 
+      kscope_codegen 
+      parsing 
+      ${REQ_LLVM_LIBRARIES}
+  )
+endif()

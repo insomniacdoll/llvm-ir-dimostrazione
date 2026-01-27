@@ -12,6 +12,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <string>
+#include <cstdlib>
 
 #include "renderer.h"
 
