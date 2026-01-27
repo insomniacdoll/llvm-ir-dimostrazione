@@ -8,7 +8,12 @@ add_compile_definitions(__STDC_FORMAT_MACROS)
 add_compile_definitions(__STDC_LIMIT_MACROS)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -fvisibility-inlines-hidden")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
+
+# Platform-specific linker flags
+if(UNIX AND NOT APPLE)
+  # Linux-specific linker flags
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
+endif()
 
 project(kscope)
 
