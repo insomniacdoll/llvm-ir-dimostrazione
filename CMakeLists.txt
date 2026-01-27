@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-stdlib=libc++")
 
 add_compile_definitions(__STDC_CONSTANT_MACROS)
 add_compile_definitions(__STDC_FORMAT_MACROS)
 add_compile_definitions(__STDC_LIMIT_MACROS)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -fvisibility-inlines-hidden")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -fvisibility-inlines-hidden")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 
 project(kscope)
 

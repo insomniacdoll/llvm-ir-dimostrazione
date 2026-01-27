@@ -21,3 +21,5 @@ add_library(parsing
   ${PARSING_SOURCES}
   ${BISON_parser_OUTPUTS}
   ${FLEX_lexer_OUTPUTS})
+
+target_link_libraries(parsing ast)
