@@ -1,60 +1,60 @@
 # LLVM IR Generation Demo - LLVM 20 Compatible
 
-这是一个现代化的LLVM IR生成演示程序，已更新以支持LLVM 20（目前最新的稳定版本）。
+This is a modern LLVM IR generation demo program, updated to support LLVM 20 (the latest stable version).
 
-## 主要更改
+## Major Changes
 
-- 更新CMakeLists.txt以使用现代CMake语法和LLVM 20
-- 将所有LLVM API调用更新为LLVM 20兼容的API
-- 用现代ORC JIT替换了已弃用的ExecutionEngine
-- 移除了legacy::FunctionPassManager，使用新的PassManager系统
-- 修复了SequentialType到PointerType的迁移（LLVM 20使用opaque pointers）
-- 修复了CloneModule API的变更
-- 修复了LLJIT lookup API的变更
-- 更新了bison语法以支持bison 3.8+
-- 修复了所有已弃用的API调用
+- Updated CMakeLists.txt to use modern CMake syntax and LLVM 20
+- Updated all LLVM API calls to be compatible with LLVM 20
+- Replaced deprecated ExecutionEngine with modern ORC JIT
+- Removed legacy::FunctionPassManager, using the new PassManager system
+- Fixed migration from SequentialType to PointerType (LLVM 20 uses opaque pointers)
+- Fixed CloneModule API changes
+- Fixed LLJIT lookup API changes
+- Updated bison grammar to support bison 3.8+
+- Fixed all deprecated API calls
 
-## 系统要求
+## System Requirements
 
-- CMake 3.15或更高版本
+- CMake 3.15 or higher
 - LLVM 20
-- Bison 3.0或更高版本
-- Flex 2.6或更高版本
-- C++17兼容的编译器
+- Bison 3.0 or higher
+- Flex 2.6 or higher
+- C++17 compatible compiler
 
-## 安装依赖
+## Installing Dependencies
 
-### macOS (使用Homebrew)
+### macOS (using Homebrew)
 
 ```bash
-# 安装LLVM 20
+# Install LLVM 20
 brew install llvm@20
 
-# 安装Bison（如果系统版本太旧）
+# Install Bison (if system version is too old)
 brew install bison
 
-# 安装Flex（如果未安装）
+# Install Flex (if not installed)
 brew install flex
 ```
 
 ### Linux (Ubuntu/Debian)
 
 ```bash
-# 安装LLVM 20
+# Install LLVM 20
 wget https://apt.llvm.org/llvm.sh
 chmod +x llvm.sh
 sudo ./llvm.sh 20
 
-# 安装Bison和Flex
+# Install Bison and Flex
 sudo apt-get install bison flex
 
-# 安装CMake
+# Install CMake
 sudo apt-get install cmake
 ```
 
-## 编译步骤
+## Build Steps
 
-### 1. 设置环境变量
+### 1. Set Environment Variables
 
 ```bash
 # macOS
@@ -66,7 +66,7 @@ export CMAKE_PREFIX_PATH="/usr/lib/llvm-20"
 export PATH="/usr/local/opt/bison/bin:$PATH"
 ```
 
-### 2. 创建构建目录并配置
+### 2. Create Build Directory and Configure
 
 ```bash
 mkdir build
@@ -74,90 +74,90 @@ cd build
 cmake ..
 ```
 
-### 3. 编译
+### 3. Build
 
 ```bash
 make -j4
 ```
 
-### 4. 运行
+### 4. Run
 
 ```bash
-# 在build目录中
+# In the build directory
 ./src/kscope
 ```
 
-## 使用示例
+## Usage Examples
 
-### 定义函数
+### Define Function
 
 ```
 ready> def foo(a b) a + b;
 ```
 
-### 调用函数
+### Call Function
 
 ```
 ready> foo(4, 5);
 ```
 
-### 使用变量
+### Use Variables
 
 ```
 ready> def bar(a) var x = a in x * x;
 ```
 
-### 条件语句
+### Conditional Statement
 
 ```
 ready> def max(a b) if a < b then b else a;
 ```
 
-### 循环
+### Loop
 
 ```
 ready> def sum(n) var i = 0, result = 0 in for i = 0, n, 1 in result = result + i;
 ```
 
-### 外部函数调用
+### External Function Call
 
 ```
 ready> extern printd(x);
 ready> printd(42);
 ```
 
-## 环境变量说明
+## Environment Variables Explanation
 
-- `CMAKE_PREFIX_PATH`: 指向LLVM安装目录，用于CMake查找LLVM
-- `PATH`: 添加bison的路径，确保使用正确版本的bison
+- `CMAKE_PREFIX_PATH`: Points to LLVM installation directory, used by CMake to find LLVM
+- `PATH`: Adds bison path to ensure the correct version of bison is used
 
-## 故障排除
+## Troubleshooting
 
-### 找不到LLVM
+### LLVM Not Found
 
-如果CMake报告找不到LLVM，请确保设置了正确的`CMAKE_PREFIX_PATH`：
+If CMake reports that LLVM cannot be found, ensure that the correct `CMAKE_PREFIX_PATH` is set:
 
 ```bash
 export CMAKE_PREFIX_PATH="/usr/local/opt/llvm@20"  # macOS
 export CMAKE_PREFIX_PATH="/usr/lib/llvm-20"       # Linux
 ```
 
-### Bison版本错误
+### Bison Version Error
 
-如果遇到bison版本错误，请确保使用bison 3.0或更高版本：
+If you encounter a bison version error, ensure you are using bison 3.0 or higher:
 
 ```bash
-# 检查bison版本
+# Check bison version
 bison --version
 
-# 如果版本太旧，安装新版本
+# If version is too old, install a new version
 brew install bison  # macOS
 sudo apt-get install bison  # Linux
 ```
 
-### 链接错误
+### Link Errors
 
-如果遇到链接错误，请确保LLVM库路径正确：
+If you encounter link errors, ensure the LLVM library path is correct:
 
 ```bash
 # macOS
@@ -169,30 +169,30 @@ export LDFLAGS="-L/usr/lib/llvm-20/lib"
 export CPPFLAGS="-I/usr/lib/llvm-20/include"
 ```
 
-## 技术细节
+## Technical Details
 
-### LLVM API变更
+### LLVM API Changes
 
-1. **ExecutionEngine → ORC JIT**: 旧的ExecutionEngine已被ORC JIT取代
-2. **legacy::FunctionPassManager**: 已被新的PassManager系统取代
-3. **SequentialType**: LLVM 20使用opaque pointers，需要使用PointerType
-4. **CloneModule**: 返回值从原始指针改为unique_ptr
-5. **LLJIT lookup**: 使用ExecutorAddr而不是原始指针
+1. **ExecutionEngine → ORC JIT**: The old ExecutionEngine has been replaced by ORC JIT
+2. **legacy::FunctionPassManager**: Has been replaced by the new PassManager system
+3. **SequentialType**: LLVM 20 uses opaque pointers, requiring the use of PointerType
+4. **CloneModule**: Return value changed from raw pointer to unique_ptr
+5. **LLJIT lookup**: Uses ExecutorAddr instead of raw pointers
 
-### 编译器标志
+### Compiler Flags
 
-项目使用以下编译器标志：
-- `-std=c++17`: C++17标准
-- `-Wall -Wextra`: 启用额外警告
-- `-fvisibility-inlines-hidden`: 隐藏内联函数符号
-- `-stdlib=libc++`: 使用libc++标准库
+The project uses the following compiler flags:
+- `-std=c++17`: C++17 standard
+- `-Wall -Wextra`: Enable extra warnings
+- `-fvisibility-inlines-hidden`: Hide inline function symbols
+- `-stdlib=libc++`: Use libc++ standard library
 
-## 许可证
+## License
 
-本项目遵循原始LLVM Kaleidoscope教程的许可证。
+This project follows the license of the original LLVM Kaleidoscope tutorial.
 
-## 参考资料
+## References
 
-- [LLVM官方文档](https://llvm.org/docs/)
-- [Kaleidoscope教程](https://llvm.org/docs/tutorial/)
-- [LLVM ORC JIT文档](https://llvm.org/docs/ORCv2.html)
+- [LLVM Official Documentation](https://llvm.org/docs/)
+- [Kaleidoscope Tutorial](https://llvm.org/docs/tutorial/)
+- [LLVM ORC JIT Documentation](https://llvm.org/docs/ORCv2.html)
