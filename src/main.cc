@@ -41,22 +41,27 @@ int main() {
 
         tree->parse(iss);
         if ( tree->root != 0 ) {
-            if ( llvm::Function *func = static_cast<llvm::Function*>(tree->root->codegen(renderer)) ) {
-                if ( func->getName() == "" ) {
+            llvm::Value *value = tree->root->codegen(renderer);
+            if ( llvm::Function *func = llvm::dyn_cast<llvm::Function>(value) ) {
+                if ( func->getName() == "__anon_expr" ) {
                     // Add the module to the JIT
                     auto tsm = llvm::orc::ThreadSafeModule(
                         std::move(renderer->module),
-                        std::make_unique<llvm::LLVMContext>()
+                        std::move(renderer->context)
                     );
                     if (auto err = renderer->engine->addIRModule(std::move(tsm))) {
-                        llvm::errs() << "Failed to add module: " << err << "\n";
+                        llvm::handleAllErrors(std::move(err), [](const llvm::ErrorInfoBase &E) {
+                            llvm::errs() << "Failed to add module: " << E.message() << "\n";
+                        });
                         continue;
                     }
 
                     // Lookup the function
                     auto sym = renderer->engine->lookup("__anon_expr");
                     if (!sym) {
-                        llvm::errs() << "Failed to lookup function: " << sym.takeError() << "\n";
+                        llvm::handleAllErrors(sym.takeError(), [](const llvm::ErrorInfoBase &E) {
+                            llvm::errs() << "Failed to lookup function: " << E.message() << "\n";
+                        });
                         continue;
                     }
 
@@ -65,8 +70,9 @@ int main() {
                     fprintf(stderr, "Evaluated to: %f\n", func_pointer());
 
                     // Create a new module for next iteration
-                    renderer->module = std::make_unique<llvm::Module>("my cool jit", renderer->llvm_context());
-                    renderer->builder = std::make_unique<llvm::IRBuilder<>>(renderer->llvm_context());
+                    renderer->context = std::make_unique<llvm::LLVMContext>();
+                    renderer->module = std::make_unique<llvm::Module>("my cool jit", *renderer->context);
+                    renderer->builder = std::make_unique<llvm::IRBuilder<>>(*renderer->context);
                 }
             }
         }

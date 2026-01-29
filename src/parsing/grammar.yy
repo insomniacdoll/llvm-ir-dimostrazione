@@ -85,7 +85,7 @@ top :
   definition END { tree.set_root($1); }
 | extern END { tree.set_root($1); }
 | expr END {
-    PrototypeNode *proto = new PrototypeNode("", std::vector<std::string>());
+    PrototypeNode *proto = new PrototypeNode("__anon_expr", std::vector<std::string>());
     tree.set_root(new FunctionNode(proto, $1));
 }
 
@@ -105,6 +105,7 @@ variable:
 number_literal :
   NUMBER { $$ = new NumberNode($1); }
 
+%right "in";
 %left "=";
 %left ">" "<";
 %left "+" "-";
@@ -159,8 +160,8 @@ arg_names:
     $$->push_back(*$1);
   }
 
+%right ",";
 %left "else" "then";
-%right "," "in";
 
 if_then :
   "if" expr "then" expr "else" expr {

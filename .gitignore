@@ -1,0 +1,8 @@
+*.layout
+*.cbp
+*.depend
+*.kdev4
+.kdev*
+build/
+.cache/
+compile_commands.json

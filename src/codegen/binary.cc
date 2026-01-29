@@ -3,6 +3,7 @@
 
 #include "ast/binary.h"
 #include "ast/variable.h"
+#include "ast/var.h"
 #include "renderer.h"
 #include "errors.h"
 
@@ -31,25 +32,25 @@ BinaryNode::codegen(IRRenderer *renderer) {
         return val;
     }
 
-    Value *left = lhs->codegen(renderer);
-    Value *right = rhs->codegen(renderer);
+    Value *lhs_value = lhs->codegen(renderer);
+    Value *rhs_value = rhs->codegen(renderer);
 
-    if (left == 0 || right == 0 ) { return 0; }
+    if (lhs_value == 0 || rhs_value == 0 ) { return 0; }
 
     Type *llvm_double_type = Type::getDoubleTy(renderer->module->getContext());
 
     switch (op) {
-    case '+': return renderer->builder->CreateFAdd(left, right, "addtmp");
-    case '-': return renderer->builder->CreateFSub(left, right, "subtmp");
-    case '*': return renderer->builder->CreateFMul(left, right, "multmp");
+    case '+': return renderer->builder->CreateFAdd(lhs_value, rhs_value, "addtmp");
+    case '-': return renderer->builder->CreateFSub(lhs_value, rhs_value, "subtmp");
+    case '*': return renderer->builder->CreateFMul(lhs_value, rhs_value, "multmp");
     case '<':
-        left = renderer->builder->CreateFCmpULT(left, right, "cmptmp");
-        return renderer->builder->CreateUIToFP(left,
+        lhs_value = renderer->builder->CreateFCmpULT(lhs_value, rhs_value, "cmptmp");
+        return renderer->builder->CreateUIToFP(lhs_value,
                                                 llvm_double_type,
                                                 "booltmp");
     case '>':
-        right = renderer->builder->CreateFCmpULT(right, left, "cmptmp");
-        return renderer->builder->CreateUIToFP(right,
+        rhs_value = renderer->builder->CreateFCmpULT(rhs_value, lhs_value, "cmptmp");
+        return renderer->builder->CreateUIToFP(rhs_value,
                                                 llvm_double_type,
                                                 "booltmp");
     default: break;

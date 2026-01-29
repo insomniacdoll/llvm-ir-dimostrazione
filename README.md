@@ -92,7 +92,7 @@ make -j4
 ### Define Function
 
 ```
-ready> def foo(a b) a + b;
+ready> def foo(a, b) a + b;
 ```
 
 ### Call Function
@@ -110,7 +110,7 @@ ready> def bar(a) var x = a in x * x;
 ### Conditional Statement
 
 ```
-ready> def max(a b) if a < b then b else a;
+ready> def max(a, b) if a < b then b else a;
 ```
 
 ### Loop
