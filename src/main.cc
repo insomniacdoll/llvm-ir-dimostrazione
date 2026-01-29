@@ -37,6 +37,18 @@ int main() {
     std::string input;
     fprintf(stderr, "ready> ");
     while (std::getline(std::cin, input, ';')) {
+        // Trim whitespace
+        input.erase(0, input.find_first_not_of(" \t\n\r"));
+        input.erase(input.find_last_not_of(" \t\n\r") + 1);
+
+        // Check for quit or exit commands (case-insensitive)
+        std::string lower_input = input;
+        std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+        if (lower_input == "quit" || lower_input == "exit") {
+            fprintf(stderr, "Goodbye!\n");
+            break;
+        }
+
         std::istringstream iss(input);
 
         tree->parse(iss);
