@@ -14,7 +14,9 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <iostream>
@@ -24,6 +26,9 @@
 #include "codegen/renderer.h"
 #include "parsing/tree.h"
 
+// Forward declarations
+extern "C" double putchard(double X);
+extern "C" double printd(double X);
 
 int main() {
     llvm::InitializeNativeTarget();
@@ -31,6 +36,21 @@ int main() {
     llvm::InitializeNativeTargetAsmParser();
 
     IRRenderer *renderer = new IRRenderer();
+
+    // Register external functions with JIT using SymbolMap
+    auto &es = renderer->engine->getExecutionSession();
+    auto &jd = renderer->engine->getMainJITDylib();
+    
+    llvm::orc::SymbolMap symbolMap;
+    auto putchardAddr = llvm::orc::ExecutorAddr::fromPtr(reinterpret_cast<void*>(putchard));
+    auto printdAddr = llvm::orc::ExecutorAddr::fromPtr(reinterpret_cast<void*>(printd));
+    symbolMap[es.intern("putchard")] = llvm::orc::ExecutorSymbolDef(putchardAddr, llvm::JITSymbolFlags::Callable);
+    symbolMap[es.intern("printd")] = llvm::orc::ExecutorSymbolDef(printdAddr, llvm::JITSymbolFlags::Callable);
+    
+    if (auto err = jd.define(llvm::orc::absoluteSymbols(symbolMap))) {
+        llvm::errs() << "Failed to register external symbols: " << err << "\n";
+        exit(1);
+    }
 
     STree *tree = new STree();
 
