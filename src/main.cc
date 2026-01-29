@@ -41,6 +41,11 @@ int main() {
         input.erase(0, input.find_first_not_of(" \t\n\r"));
         input.erase(input.find_last_not_of(" \t\n\r") + 1);
 
+        // Skip empty input
+        if (input.empty()) {
+            continue;
+        }
+
         // Check for quit or exit commands (case-insensitive)
         std::string lower_input = input;
         std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
@@ -54,8 +59,9 @@ int main() {
         tree->parse(iss);
         if ( tree->root != 0 ) {
             llvm::Value *value = tree->root->codegen(renderer);
-            if ( llvm::Function *func = llvm::dyn_cast<llvm::Function>(value) ) {
-                if ( func->getName() == "__anon_expr" ) {
+            if ( value != 0 ) {
+                llvm::Function *func = llvm::dyn_cast<llvm::Function>(value);
+                if ( func != 0 && func->getName() == "__anon_expr" ) {
                     // Add the module to the JIT
                     auto tsm = llvm::orc::ThreadSafeModule(
                         std::move(renderer->module),
