@@ -113,3 +113,79 @@ IRRenderer::create_entry_block_alloca(Function *func, const std::string &name) {
                                     0,
                                     name.c_str());
 }
+
+void
+IRRenderer::declare_external_function(const std::string &name) {
+    // Create function type for a function that takes a double and returns a double
+    std::vector<Type*> param_types = {Type::getDoubleTy(module->getContext())};
+    llvm::FunctionType *func_type = llvm::FunctionType::get(
+        Type::getDoubleTy(module->getContext()),
+        param_types,
+        false
+    );
+
+    // Create or get the function with ExternalLinkage (external function)
+    Function::Create(
+        func_type,
+        Function::ExternalLinkage,
+        name,
+        module.get()
+    );
+}
+
+Function *
+IRRenderer::get_function(const std::string &name) {
+    // First, try to find the function in the current module
+    Function *func = module->getFunction(name);
+    if (func != nullptr) {
+        return func;
+    }
+
+    // If not found in the module, try to find it in the JIT
+    auto sym = engine->lookup(name);
+    if (sym) {
+        // Found in JIT, create a declaration in the current module
+        // Use the stored argument count if available
+        auto it = function_arg_counts.find(name);
+        if (it == function_arg_counts.end()) {
+            // If we don't have argument count information, we can't create the declaration
+            return nullptr;
+        }
+
+        int arg_count = it->second;
+
+        // Create the function type in the current context
+        // Assume all parameters are doubles and return type is double
+        std::vector<Type*> param_types(arg_count, Type::getDoubleTy(module->getContext()));
+        llvm::FunctionType *func_type = llvm::FunctionType::get(
+            Type::getDoubleTy(module->getContext()),
+            param_types,
+            false
+        );
+
+        func = Function::Create(
+            func_type,
+            Function::ExternalLinkage,
+            name,
+            module.get()
+        );
+        return func;
+    }
+
+    return nullptr;
+}
+
+void
+IRRenderer::add_function_type(const std::string &name, llvm::FunctionType *type) {
+    function_arg_counts[name] = type->getNumParams();
+}
+
+void
+IRRenderer::reset_function_types() {
+    // Collect function argument counts from the current module
+    for (auto &func : *module) {
+        if (!func.isDeclaration()) {
+            function_arg_counts[func.getName().str()] = func.arg_size();
+        }
+    }
+}

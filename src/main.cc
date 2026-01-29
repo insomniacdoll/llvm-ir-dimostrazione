@@ -40,13 +40,13 @@ int main() {
     // Register external functions with JIT using SymbolMap
     auto &es = renderer->engine->getExecutionSession();
     auto &jd = renderer->engine->getMainJITDylib();
-    
+
     llvm::orc::SymbolMap symbolMap;
-    auto putchardAddr = reinterpret_cast<llvm::JITTargetAddress>(putchard);
-    auto printdAddr = reinterpret_cast<llvm::JITTargetAddress>(printd);
-    symbolMap[es.intern("putchard")] = llvm::JITEvaluatedSymbol(putchardAddr, llvm::JITSymbolFlags::Callable);
-    symbolMap[es.intern("printd")] = llvm::JITEvaluatedSymbol(printdAddr, llvm::JITSymbolFlags::Callable);
-    
+    auto putchardAddr = llvm::orc::ExecutorAddr(reinterpret_cast<uintptr_t>(putchard));
+    auto printdAddr = llvm::orc::ExecutorAddr(reinterpret_cast<uintptr_t>(printd));
+    symbolMap[es.intern("putchard")] = llvm::orc::ExecutorSymbolDef(putchardAddr, llvm::JITSymbolFlags::Callable);
+    symbolMap[es.intern("printd")] = llvm::orc::ExecutorSymbolDef(printdAddr, llvm::JITSymbolFlags::Callable);
+
     if (auto err = jd.define(llvm::orc::absoluteSymbols(symbolMap))) {
         llvm::errs() << "Failed to register external symbols: " << err << "\n";
         exit(1);
@@ -81,36 +81,50 @@ int main() {
             llvm::Value *value = tree->root->codegen(renderer);
             if ( value != 0 ) {
                 llvm::Function *func = llvm::dyn_cast<llvm::Function>(value);
-                if ( func != 0 && func->getName() == "__anon_expr" ) {
-                    // Add the module to the JIT
-                    auto tsm = llvm::orc::ThreadSafeModule(
-                        std::move(renderer->module),
-                        std::move(renderer->context)
-                    );
-                    if (auto err = renderer->engine->addIRModule(std::move(tsm))) {
-                        llvm::handleAllErrors(std::move(err), [](const llvm::ErrorInfoBase &E) {
-                            llvm::errs() << "Failed to add module: " << E.message() << "\n";
-                        });
-                        continue;
+                if ( func != 0 ) {
+                    std::string func_name = func->getName().str();
+                    if ( func_name.substr(0, 11) == "__anon_expr" ) {
+                        // This is an anonymous expression, JIT and execute it
+                        // Collect function types before moving module
+                        renderer->reset_function_types();
+
+                        // Add the module to the JIT
+                        auto tsm = llvm::orc::ThreadSafeModule(
+                            std::move(renderer->module),
+                            std::move(renderer->context)
+                        );
+                        if (auto err = renderer->engine->addIRModule(std::move(tsm))) {
+                            llvm::handleAllErrors(std::move(err), [](const llvm::ErrorInfoBase &E) {
+                                llvm::errs() << "Failed to add module: " << E.message() << "\n";
+                            });
+                            continue;
+                        }
+
+                        // Lookup the function with its actual name
+                        auto sym = renderer->engine->lookup(func_name);
+                        if (!sym) {
+                            llvm::handleAllErrors(sym.takeError(), [](const llvm::ErrorInfoBase &E) {
+                                llvm::errs() << "Failed to lookup function: " << E.message() << "\n";
+                            });
+                            continue;
+                        }
+
+                        double (*func_pointer)() = (double(*)())(intptr_t)sym->getValue();
+                        fprintf(stderr, "Evaluated to: %f\n", func_pointer());
+
+                        // Create a new module for next iteration
+                        renderer->context = std::make_unique<llvm::LLVMContext>();
+                        renderer->module = std::make_unique<llvm::Module>("my cool jit", *renderer->context);
+                        renderer->builder = std::make_unique<llvm::IRBuilder<>>(*renderer->context);
+
+                        // Redefine external functions that were registered with JIT
+                        renderer->declare_external_function("putchard");
+                        renderer->declare_external_function("printd");
+                    } else {
+                        // This is a function definition or extern declaration
+                        // Don't JIT it, just keep it in the module for later use
+                        fprintf(stderr, "Read %s definition\n", func_name.c_str());
                     }
-
-                    // Lookup the function
-                    auto sym = renderer->engine->lookup("__anon_expr");
-                    if (!sym) {
-                        llvm::handleAllErrors(sym.takeError(), [](const llvm::ErrorInfoBase &E) {
-                            llvm::errs() << "Failed to lookup function: " << E.message() << "\n";
-                        });
-                        continue;
-                    }
-
-                    void *func_ptr = reinterpret_cast<void*>(sym->getAddress());
-                    double (*func_pointer)() = (double(*)())(intptr_t)func_ptr;
-                    fprintf(stderr, "Evaluated to: %f\n", func_pointer());
-
-                    // Create a new module for next iteration
-                    renderer->context = std::make_unique<llvm::LLVMContext>();
-                    renderer->module = std::make_unique<llvm::Module>("my cool jit", *renderer->context);
-                    renderer->builder = std::make_unique<llvm::IRBuilder<>>(*renderer->context);
                 }
             }
         }

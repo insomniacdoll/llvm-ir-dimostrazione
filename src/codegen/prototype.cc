@@ -62,5 +62,8 @@ PrototypeNode::codegen(IRRenderer *renderer) {
         val->setName(arg);
     }
 
+    // Record the function type for later use
+    renderer->add_function_type(name, func_type);
+
     return func;
 }

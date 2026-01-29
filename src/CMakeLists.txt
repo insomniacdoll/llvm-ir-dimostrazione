@@ -11,8 +11,19 @@ set(KSCOPE_SOURCES main.cc errors.cc)
 add_executable(kscope ${KSCOPE_SOURCES})
 
 # Platform-specific linking to handle circular dependencies
-if(UNIX AND NOT APPLE)
-  # Use linker groups for Linux to handle circular dependencies
+if(APPLE)
+  # macOS: Suppress duplicate library warnings (LLVM has circular dependencies)
+  set_target_properties(kscope PROPERTIES
+      LINK_FLAGS "-Wl,-dead_strip,-w"
+  )
+  target_link_libraries(kscope
+      kscope_codegen
+      parsing
+      ast
+      ${REQ_LLVM_LIBRARIES}
+  )
+elseif(UNIX)
+  # Linux: Use linker groups to handle circular dependencies
   target_link_libraries(kscope
       -Wl,--start-group
       ast
@@ -22,12 +33,11 @@ if(UNIX AND NOT APPLE)
       -Wl,--end-group
   )
 else()
-  # For macOS and other platforms, use standard linking
-  # The order may need adjustment based on actual dependencies
+  # Other platforms: use standard linking
   target_link_libraries(kscope
-      ast
       kscope_codegen
       parsing
+      ast
       ${REQ_LLVM_LIBRARIES}
   )
 endif()

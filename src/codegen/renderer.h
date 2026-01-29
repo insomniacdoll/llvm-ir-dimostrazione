@@ -27,6 +27,7 @@ using ::llvm::orc::LLJIT;
 
 class IRRenderer {
     map<string, AllocaInst*> named_values;
+    map<string, int> function_arg_counts;  // Store function name -> argument count
 
     IRRenderer(const IRRenderer &other);
     IRRenderer(Module *module);
@@ -51,4 +52,8 @@ public:
     void clear_all_named_values();
 
     AllocaInst *create_entry_block_alloca(Function *func, const std::string &name);
+    void declare_external_function(const std::string &name);
+    Function *get_function(const std::string &name);
+    void add_function_type(const std::string &name, llvm::FunctionType *type);
+    void reset_function_types();
 };

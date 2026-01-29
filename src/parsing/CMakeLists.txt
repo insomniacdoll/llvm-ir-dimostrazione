@@ -22,7 +22,7 @@ add_library(parsing
   ${BISON_parser_OUTPUTS}
   ${FLEX_lexer_OUTPUTS})
 
-target_link_libraries(parsing ast)
+target_link_libraries(parsing PRIVATE ast)
 
 # Disable unused-but-set-variable warning for Bison-generated file
 set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/bison_parser.cc PROPERTIES

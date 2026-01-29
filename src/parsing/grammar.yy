@@ -21,6 +21,9 @@
 %code{
 static int yylex(bison::Parser::semantic_type *yylval,
                  Lexer &lexer);
+
+// Counter for unique anonymous expression names
+static int anon_expr_counter = 0;
 }
 
 %union {
@@ -85,7 +88,8 @@ top :
   definition END { tree.set_root($1); }
 | extern END { tree.set_root($1); }
 | expr END {
-    PrototypeNode *proto = new PrototypeNode("__anon_expr", std::vector<std::string>());
+    std::string anon_name = "__anon_expr_" + std::to_string(anon_expr_counter++);
+    PrototypeNode *proto = new PrototypeNode(anon_name, std::vector<std::string>());
     tree.set_root(new FunctionNode(proto, $1));
 }
 

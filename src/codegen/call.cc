@@ -9,7 +9,7 @@
 
 llvm::Value *
 CallNode::codegen(IRRenderer *renderer) {
-    llvm::Function *callee_func = renderer->module->getFunction(callee);
+    llvm::Function *callee_func = renderer->get_function(callee);
     if ( callee_func == 0 ) {
         return ErrorV("Unknown function referenced");
     }
