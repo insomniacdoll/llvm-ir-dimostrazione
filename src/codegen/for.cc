@@ -30,7 +30,16 @@ ForNode::codegen(IRRenderer *renderer) {
 
     renderer->builder->CreateStore(start_value, alloca);
 
+    Value *step_value;
+    if ( step ) {
+        step_value = step->codegen(renderer);
+        if ( step_value == 0 ) { return 0; }
+    } else {
+        step_value = ConstantFP::get(renderer->module->getContext(), APFloat(1.0));
+    }
+
     BasicBlock *loop_block = BasicBlock::Create(renderer->module->getContext(), "loop", func);
+    BasicBlock *after_block = BasicBlock::Create(renderer->module->getContext(), "afterloop", func);
 
     renderer->builder->CreateBr(loop_block);
     renderer->builder->SetInsertPoint(loop_block);
@@ -40,30 +49,20 @@ ForNode::codegen(IRRenderer *renderer) {
 
     if ( body->codegen(renderer) == 0 ) { return 0; }
 
-    Value *step_value;
-    if ( step ) {
-        step_value = step->codegen(renderer);
-        if ( step_value == 0 ) { return 0; }
-    } else {
-        step_value = ConstantFP::get(renderer->module->getContext(), APFloat(1.0));
-    }
-
-    Value *end_condition = end->codegen(renderer);
-    if ( end_condition == 0 ) { return 0; }
-
     Value *current_var = renderer->builder->CreateLoad(alloca->getAllocatedType(), alloca, var_name.c_str());
     Value *next_var = renderer->builder->CreateFAdd(current_var, step_value, "nextvar");
     renderer->builder->CreateStore(next_var, alloca);
 
-    end_condition = renderer->builder->CreateFCmpONE(
+    Value *end_condition = end->codegen(renderer);
+    if ( end_condition == 0 ) { return 0; }
+
+    Value *loop_condition = renderer->builder->CreateFCmpULT(
+        next_var,
         end_condition,
-        ConstantFP::get(renderer->module->getContext(), APFloat(0.0)),
         "loopcond"
     );
 
-    BasicBlock *after_block = BasicBlock::Create(renderer->module->getContext(), "afterloop", func);
-
-    renderer->builder->CreateCondBr(end_condition, loop_block, after_block);
+    renderer->builder->CreateCondBr(loop_condition, loop_block, after_block);
     renderer->builder->SetInsertPoint(after_block);
 
     if ( old_value ) {

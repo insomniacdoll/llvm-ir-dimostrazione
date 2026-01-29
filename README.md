@@ -116,7 +116,8 @@ ready> def max(a, b) if a < b then b else a;
 ### Loop
 
 ```
-ready> def sum(n) var i = 0, result = 0 in for i = 0, n, 1 in result = result + i;
+ready> def test(n) for i = 1, n+1, 1 in i * i;
+ready> test(5);
 ```
 
 ### External Function Call

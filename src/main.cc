@@ -42,10 +42,10 @@ int main() {
     auto &jd = renderer->engine->getMainJITDylib();
     
     llvm::orc::SymbolMap symbolMap;
-    auto putchardAddr = llvm::orc::ExecutorAddr::fromPtr(reinterpret_cast<void*>(putchard));
-    auto printdAddr = llvm::orc::ExecutorAddr::fromPtr(reinterpret_cast<void*>(printd));
-    symbolMap[es.intern("putchard")] = llvm::orc::ExecutorSymbolDef(putchardAddr, llvm::JITSymbolFlags::Callable);
-    symbolMap[es.intern("printd")] = llvm::orc::ExecutorSymbolDef(printdAddr, llvm::JITSymbolFlags::Callable);
+    auto putchardAddr = reinterpret_cast<llvm::JITTargetAddress>(putchard);
+    auto printdAddr = reinterpret_cast<llvm::JITTargetAddress>(printd);
+    symbolMap[es.intern("putchard")] = llvm::JITEvaluatedSymbol(putchardAddr, llvm::JITSymbolFlags::Callable);
+    symbolMap[es.intern("printd")] = llvm::JITEvaluatedSymbol(printdAddr, llvm::JITSymbolFlags::Callable);
     
     if (auto err = jd.define(llvm::orc::absoluteSymbols(symbolMap))) {
         llvm::errs() << "Failed to register external symbols: " << err << "\n";
@@ -103,7 +103,7 @@ int main() {
                         continue;
                     }
 
-                    void *func_ptr = reinterpret_cast<void*>(sym->getValue());
+                    void *func_ptr = reinterpret_cast<void*>(sym->getAddress());
                     double (*func_pointer)() = (double(*)())(intptr_t)func_ptr;
                     fprintf(stderr, "Evaluated to: %f\n", func_pointer());
 

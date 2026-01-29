@@ -10,28 +10,24 @@ set(KSCOPE_SOURCES main.cc errors.cc)
 
 add_executable(kscope ${KSCOPE_SOURCES})
 
-# 确保库之间的依赖关系正确
-target_link_libraries(kscope_codegen ast)
-target_link_libraries(parsing ast)
-
 # Platform-specific linking to handle circular dependencies
 if(UNIX AND NOT APPLE)
   # Use linker groups for Linux to handle circular dependencies
-  target_link_libraries(kscope 
+  target_link_libraries(kscope
       -Wl,--start-group
-      ast 
-      kscope_codegen 
-      parsing 
+      ast
+      kscope_codegen
+      parsing
       ${REQ_LLVM_LIBRARIES}
       -Wl,--end-group
   )
 else()
   # For macOS and other platforms, use standard linking
   # The order may need adjustment based on actual dependencies
-  target_link_libraries(kscope 
-      ast 
-      kscope_codegen 
-      parsing 
+  target_link_libraries(kscope
+      ast
+      kscope_codegen
+      parsing
       ${REQ_LLVM_LIBRARIES}
   )
 endif()
