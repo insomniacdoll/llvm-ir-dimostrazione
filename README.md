@@ -45,8 +45,9 @@ wget https://apt.llvm.org/llvm.sh
 chmod +x llvm.sh
 sudo ./llvm.sh 20
 
-# Install Bison and Flex
-sudo apt-get install bison flex
+# Install Bison, Flex and development libraries
+sudo apt-get update
+sudo apt-get install -y bison flex libfl-dev
 
 # Install CMake
 sudo apt-get install cmake
@@ -58,12 +59,11 @@ sudo apt-get install cmake
 
 ```bash
 # macOS
-export CMAKE_PREFIX_PATH="/usr/local/opt/llvm@20"
-export PATH="/usr/local/opt/bison/bin:$PATH"
+export CMAKE_PREFIX_PATH="$(brew --prefix llvm@20)"
+export PATH="$(brew --prefix bison)/bin:$PATH"
 
-# Linux
-export CMAKE_PREFIX_PATH="/usr/lib/llvm-20"
-export PATH="/usr/local/opt/bison/bin:$PATH"
+# Linux (optional, cmake should find LLVM automatically)
+# export CMAKE_PREFIX_PATH="/usr/lib/llvm-20"
 ```
 
 ### 2. Create Build Directory and Configure
@@ -139,8 +139,11 @@ ready> printd(42);
 If CMake reports that LLVM cannot be found, ensure that the correct `CMAKE_PREFIX_PATH` is set:
 
 ```bash
-export CMAKE_PREFIX_PATH="/usr/local/opt/llvm@20"  # macOS
-export CMAKE_PREFIX_PATH="/usr/lib/llvm-20"       # Linux
+# macOS (use brew --prefix for correct path)
+export CMAKE_PREFIX_PATH="$(brew --prefix llvm@20)"
+
+# Linux
+export CMAKE_PREFIX_PATH="/usr/lib/llvm-20"
 ```
 
 ### Bison Version Error
@@ -161,9 +164,9 @@ sudo apt-get install bison  # Linux
 If you encounter link errors, ensure the LLVM library path is correct:
 
 ```bash
-# macOS
-export LDFLAGS="-L/usr/local/opt/llvm@20/lib"
-export CPPFLAGS="-I/usr/local/opt/llvm@20/include"
+# macOS (use brew --prefix for correct path)
+export LDFLAGS="-L$(brew --prefix llvm@20)/lib"
+export CPPFLAGS="-I$(brew --prefix llvm@20)/include"
 
 # Linux
 export LDFLAGS="-L/usr/lib/llvm-20/lib"
@@ -171,6 +174,15 @@ export CPPFLAGS="-I/usr/lib/llvm-20/include"
 ```
 
 ## Technical Details
+
+### Release Artifacts
+
+The project uses GitHub Actions to build and release binaries for the following platforms:
+
+- **Linux**: `kscope-linux-x86_64-{version}.tar.gz`
+- **macOS**: `kscope-macos-arm64-{version}.tar.gz` (Apple Silicon)
+
+Releases are automatically created when a version tag (e.g., `v0.1`, `v1.0.0`) is pushed to the repository.
 
 ### LLVM API Changes
 
