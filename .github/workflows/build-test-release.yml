@@ -43,12 +43,26 @@ jobs:
           CMAKE_PREFIX_PATH: ${{ matrix.cmake_prefix_path }}
         run: |
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            export PATH="/usr/local/opt/bison/bin:$PATH"
-            export LLVM_DIR="/usr/local/opt/llvm@20/lib/cmake/llvm"
+            # Use brew --prefix to get correct path regardless of architecture
+            BREW_LLVM_PREFIX=$(brew --prefix llvm@20)
+            BREW_BISON_PREFIX=$(brew --prefix bison)
+            export PATH="$BREW_BISON_PREFIX/bin:$PATH"
           fi
           mkdir build
           cd build
-          cmake ..
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            # Find LLVMConfig.cmake location
+            LLVM_CONFIG=$(find "$BREW_LLVM_PREFIX" -name "LLVMConfig.cmake" 2>/dev/null | head -1)
+            if [ -n "$LLVM_CONFIG" ]; then
+              LLVM_DIR=$(dirname "$LLVM_CONFIG")
+              cmake .. -DLLVM_DIR="$LLVM_DIR"
+            else
+              echo "Error: Cannot find LLVMConfig.cmake"
+              exit 1
+            fi
+          else
+            cmake ..
+          fi
 
       - name: Build
         run: |
