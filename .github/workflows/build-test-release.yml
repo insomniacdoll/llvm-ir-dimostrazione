@@ -18,7 +18,7 @@ jobs:
             arch: x86_64
           - os: macos-latest
             platform: macos
-            arch: universal
+            arch: arm64
 
     steps:
       - name: Checkout code
@@ -44,8 +44,6 @@ jobs:
             # Use brew --prefix to get correct path regardless of architecture
             export CMAKE_PREFIX_PATH=$(brew --prefix llvm@20)
             export PATH="$(brew --prefix bison)/bin:$PATH"
-            # Build universal binary for macOS (arm64 + x86_64)
-            export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           fi
           mkdir build
           cd build
