@@ -92,7 +92,12 @@ jobs:
           cd build/src
           strip kscope || true
           # Extract version from tag (e.g., v0.1 -> 0.1)
-          VERSION=${GITHUB_REF#refs/tags/v}
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            # For non-tag runs, use commit SHA or a default version
+            VERSION="${GITHUB_SHA:0:7}"
+          fi
           ASSET_NAME="kscope-${{ matrix.platform }}-${{ matrix.arch }}-${VERSION}"
           tar -czf kscope.tar.gz kscope
           mv kscope.tar.gz ../../${ASSET_NAME}.tar.gz
