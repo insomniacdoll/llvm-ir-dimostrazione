@@ -41,8 +41,10 @@ jobs:
       - name: Configure CMake
         env:
           CMAKE_PREFIX_PATH: ${{ matrix.cmake_prefix_path }}
-          PATH: ${{ matrix.os == 'macos-latest' && '/usr/local/opt/bison/bin:$PATH' || '$PATH' }}
         run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            export PATH="/usr/local/opt/bison/bin:$PATH"
+          fi
           mkdir build
           cd build
           cmake ..
