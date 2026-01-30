@@ -11,17 +11,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-15]
+        os: [ubuntu-latest, macos-latest]
         include:
           - os: ubuntu-latest
             platform: linux
             arch: x86_64
           - os: macos-latest
             platform: macos
-            arch: arm64
-          - os: macos-15
-            platform: macos
-            arch: x86_64
+            arch: universal
 
     steps:
       - name: Checkout code
@@ -47,6 +44,8 @@ jobs:
             # Use brew --prefix to get correct path regardless of architecture
             export CMAKE_PREFIX_PATH=$(brew --prefix llvm@20)
             export PATH="$(brew --prefix bison)/bin:$PATH"
+            # Build universal binary for macOS (arm64 + x86_64)
+            export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           fi
           mkdir build
           cd build
