@@ -15,10 +15,8 @@ jobs:
         include:
           - os: ubuntu-latest
             asset_name: kscope-linux
-            cmake_prefix_path: /usr/lib/llvm-20
           - os: macos-latest
             asset_name: kscope-macos
-            cmake_prefix_path: /usr/local/opt/llvm@20
 
     steps:
       - name: Checkout code
@@ -39,30 +37,15 @@ jobs:
           brew install llvm@20 bison flex
 
       - name: Configure CMake
-        env:
-          CMAKE_PREFIX_PATH: ${{ matrix.cmake_prefix_path }}
         run: |
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
             # Use brew --prefix to get correct path regardless of architecture
-            BREW_LLVM_PREFIX=$(brew --prefix llvm@20)
-            BREW_BISON_PREFIX=$(brew --prefix bison)
-            export PATH="$BREW_BISON_PREFIX/bin:$PATH"
+            export CMAKE_PREFIX_PATH=$(brew --prefix llvm@20)
+            export PATH="$(brew --prefix bison)/bin:$PATH"
           fi
           mkdir build
           cd build
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            # Find LLVMConfig.cmake location
-            LLVM_CONFIG=$(find "$BREW_LLVM_PREFIX" -name "LLVMConfig.cmake" 2>/dev/null | head -1)
-            if [ -n "$LLVM_CONFIG" ]; then
-              LLVM_DIR=$(dirname "$LLVM_CONFIG")
-              cmake .. -DLLVM_DIR="$LLVM_DIR"
-            else
-              echo "Error: Cannot find LLVMConfig.cmake"
-              exit 1
-            fi
-          else
-            cmake ..
-          fi
+          cmake ..
 
       - name: Build
         run: |
