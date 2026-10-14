@@ -93,9 +93,12 @@ jobs:
       - name: Test - Loop
         run: |
           cd build
-          output=$(echo -e "def test(n) for i = 1, n+1, 1 in i * i;\ntest(5);" | ./src/kscope 2>&1)
-          echo "$output"
-          echo "$output" | grep -q "Read test definition"
+          # printd() inside the body makes the loop's real execution visible, so
+          # this asserts on what the loop computes. Grepping only for
+          # "Read test definition" would still pass if the body never ran.
+          stdout=$(echo -e "extern printd(x);\ndef test(n) for i = 1, n+1, 1 in printd(i * i);\ntest(3);" | ./src/kscope 2>/dev/null)
+          echo "$stdout"
+          test "$stdout" = "$(printf '1.000000\n4.000000\n9.000000')"
 
       - name: Test - External Function Call
         run: |

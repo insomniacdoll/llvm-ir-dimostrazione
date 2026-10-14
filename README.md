@@ -62,8 +62,9 @@ sudo apt-get install cmake
 export CMAKE_PREFIX_PATH="$(brew --prefix llvm@20)"
 export PATH="$(brew --prefix bison)/bin:$PATH"
 
-# Linux (optional, cmake should find LLVM automatically)
-# export CMAKE_PREFIX_PATH="/usr/lib/llvm-20"
+# Linux (apt.llvm.org installs LLVM 20 under /usr/lib/llvm-20, which is not on
+# CMake's default search path, so the hint is needed here too)
+export CMAKE_PREFIX_PATH="$(llvm-config-20 --prefix)"
 ```
 
 ### 2. Create Build Directory and Configure
