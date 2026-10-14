@@ -43,6 +43,7 @@ BinaryNode::codegen(IRRenderer *renderer) {
     case '+': return renderer->builder->CreateFAdd(lhs_value, rhs_value, "addtmp");
     case '-': return renderer->builder->CreateFSub(lhs_value, rhs_value, "subtmp");
     case '*': return renderer->builder->CreateFMul(lhs_value, rhs_value, "multmp");
+    case '/': return renderer->builder->CreateFDiv(lhs_value, rhs_value, "divtmp");
     case '<':
         lhs_value = renderer->builder->CreateFCmpULT(lhs_value, rhs_value, "cmptmp");
         return renderer->builder->CreateUIToFP(lhs_value,

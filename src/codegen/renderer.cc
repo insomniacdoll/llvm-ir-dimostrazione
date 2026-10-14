@@ -8,11 +8,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
-#include <string>
 #include <cstdlib>
+#include <string>
 
 #include "renderer.h"
 
@@ -40,38 +38,11 @@ IRRenderer::IRRenderer() {
     engine = std::move(initResult.get());
 }
 
-IRRenderer::IRRenderer(const IRRenderer &other)
-    : IRRenderer(llvm::CloneModule(*other.module).release()) {}
-
-IRRenderer::IRRenderer(Module *module)
-    : context(std::make_unique<LLVMContext>()),
-      module(std::unique_ptr<Module>(module)),
-      builder(std::make_unique<IRBuilder<>>(*context)) {
-
-    auto jit_builder = llvm::orc::LLJITBuilder();
-    auto initResult = jit_builder.create();
-    if (auto err = initResult.takeError()) {
-        llvm::errs() << "Could not create LLJIT: " << err << "\n";
-        exit(1);
-    }
-
-    engine = std::move(initResult.get());
-}
-
 IRRenderer::IRRenderer(IRRenderer &&other) {
     context = std::move(other.context);
     module = std::move(other.module);
     engine = std::move(other.engine);
     builder = std::move(other.builder);
-}
-
-IRRenderer &
-IRRenderer::operator =(IRRenderer other) {
-    std::swap(context, other.context);
-    std::swap(module, other.module);
-    std::swap(engine, other.engine);
-    std::swap(builder, other.builder);
-    return *this;
 }
 
 IRRenderer::~IRRenderer() {
@@ -86,7 +57,10 @@ IRRenderer::llvm_context() { return *context; }
 
 llvm::AllocaInst *
 IRRenderer::get_named_value (const std::string &name){
-    return named_values[name];
+    // Use find() rather than operator[]: the latter would silently insert a
+    // null entry for every unknown name, growing the map on every lookup miss.
+    auto it = named_values.find(name);
+    return it == named_values.end() ? nullptr : it->second;
 }
 
 void

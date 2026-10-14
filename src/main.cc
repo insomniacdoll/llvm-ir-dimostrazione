@@ -19,6 +19,10 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -93,8 +97,23 @@ int main() {
                             std::move(renderer->module),
                             std::move(renderer->context)
                         );
-                        if (auto err = renderer->engine->addIRModule(std::move(tsm))) {
-                            llvm::handleAllErrors(std::move(err), [](const llvm::ErrorInfoBase &E) {
+                        auto add_error = renderer->engine->addIRModule(std::move(tsm));
+
+                        // The module and its context have been handed to the JIT
+                        // above, so the renderer must be given a fresh set before
+                        // anything else touches it. This has to happen before the
+                        // error checks below: leaving them null and then taking
+                        // `continue` used to crash on the very next statement.
+                        renderer->context = std::make_unique<llvm::LLVMContext>();
+                        renderer->module = std::make_unique<llvm::Module>("my cool jit", *renderer->context);
+                        renderer->builder = std::make_unique<llvm::IRBuilder<>>(*renderer->context);
+
+                        // Redefine external functions that were registered with JIT
+                        renderer->declare_external_function("putchard");
+                        renderer->declare_external_function("printd");
+
+                        if (add_error) {
+                            llvm::handleAllErrors(std::move(add_error), [](const llvm::ErrorInfoBase &E) {
                                 llvm::errs() << "Failed to add module: " << E.message() << "\n";
                             });
                             continue;
@@ -111,15 +130,6 @@ int main() {
 
                         double (*func_pointer)() = (double(*)())(intptr_t)sym->getValue();
                         fprintf(stderr, "Evaluated to: %f\n", func_pointer());
-
-                        // Create a new module for next iteration
-                        renderer->context = std::make_unique<llvm::LLVMContext>();
-                        renderer->module = std::make_unique<llvm::Module>("my cool jit", *renderer->context);
-                        renderer->builder = std::make_unique<llvm::IRBuilder<>>(*renderer->context);
-
-                        // Redefine external functions that were registered with JIT
-                        renderer->declare_external_function("putchard");
-                        renderer->declare_external_function("printd");
                     } else {
                         // This is a function definition or extern declaration
                         // Don't JIT it, just keep it in the module for later use

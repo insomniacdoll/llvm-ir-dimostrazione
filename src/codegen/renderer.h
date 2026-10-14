@@ -29,11 +29,13 @@ class IRRenderer {
     map<string, AllocaInst*> named_values;
     map<string, int> function_arg_counts;  // Store function name -> argument count
 
-    IRRenderer(const IRRenderer &other);
-    IRRenderer(Module *module);
+    // The module is bound to this renderer's LLVMContext, so the copy
+    // constructor cannot be implemented correctly (the previous one cloned the
+    // module but then handed it to a *different* context). Copying is not used
+    // anywhere, so forbid it outright.
+    IRRenderer(const IRRenderer &other) = delete;
+    IRRenderer &operator =(const IRRenderer &other) = delete;
     IRRenderer(IRRenderer &&other);
-
-    IRRenderer &operator =(IRRenderer other);
 
 public:
     IRRenderer();
