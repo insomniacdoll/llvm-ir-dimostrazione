@@ -41,7 +41,7 @@ static int anon_expr_counter = 0;
 
 %destructor {
     if ($$)  { delete ($$); ($$) = nullptr; }
-} <str> <node> <proto> <func> <strs>
+} <str> <node> <proto> <func> <strs> <nodes> <declr> <declrs>
 
 %define api.token.prefix {}
 
@@ -87,6 +87,10 @@ static int anon_expr_counter = 0;
 top :
   definition END { tree.set_root($1); }
 | extern END { tree.set_root($1); }
+  /* A chunk that lexes to nothing but END -- a lone comment such as a trailing
+     "# ..." line -- is not an error: there is simply nothing to generate.
+     `root` is left null, so main() skips it. */
+| END { }
 | expr END {
     std::string anon_name = "__anon_expr_" + std::to_string(anon_expr_counter++);
     PrototypeNode *proto = new PrototypeNode(anon_name, std::vector<std::string>());
@@ -104,7 +108,7 @@ expr :
 | "(" expr ")" { $$ = $2; }
 
 variable:
-  IDENTIFIER { $$ = new VariableNode(*$1); }
+  IDENTIFIER { $$ = new VariableNode(*$1); delete $1; }
 
 number_literal :
   NUMBER { $$ = new NumberNode($1); }
@@ -127,6 +131,8 @@ binary_op :
 call :
 IDENTIFIER "(" call_args ")" {
   $$ = new CallNode(*$1, *$3);
+  delete $1;
+  delete $3;
 }
 
 call_args :
@@ -151,6 +157,8 @@ definition :
 prototype :
 IDENTIFIER "(" arg_names ")" {
     $$ = new PrototypeNode(*$1, *$3);
+    delete $1;
+    delete $3;
 }
 
 arg_names:
@@ -158,10 +166,12 @@ arg_names:
 | arg_names "," IDENTIFIER {
     $$ = $1;
     $$->push_back(*$3);
+    delete $3;
   }
 | IDENTIFIER {
     $$ = new std::vector<std::string>();
     $$->push_back(*$1);
+    delete $1;
   }
 
 %right ",";
@@ -175,9 +185,11 @@ if_then :
 for_loop :
   "for" IDENTIFIER "=" expr "," expr "in" expr {
     $$ = new ForNode(*$2, $4, $6, 0, $8);
+    delete $2;
   }
 | "for" IDENTIFIER "=" expr "," expr "," expr "in" expr {
     $$ = new ForNode(*$2, $4, $6, $8, $10);
+    delete $2;
   }
 
 
@@ -193,19 +205,23 @@ declarations :
 | declarations "," declaration {
     $$ = $1;
     $$->push_back(*$3);
+    delete $3;
   }
 | declaration {
     $$ = new std::vector<std::pair<std::string, ASTNode*> >();
     $$->push_back(*$1);
+    delete $1;
   }
 
 
 declaration :
   IDENTIFIER "=" expr {
     $$ = new std::pair<std::string, ASTNode*>(*$1, $3);
+    delete $1;
   }
 | IDENTIFIER {
     $$ = new std::pair<std::string, ASTNode*>(*$1, 0);
+    delete $1;
   }
 
 %%

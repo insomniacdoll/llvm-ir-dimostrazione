@@ -7,22 +7,27 @@ typedef bison::Parser::token token;
 #define yyterminate() return( token::END )
 %}
 
-%s COMMENT
+/* Exclusive: inside a comment only the <COMMENT> rules apply, so the normal
+   rules (including the newline skipper below) cannot shadow the rule that
+   ends the comment. */
+%x COMMENT
 
 %option debug
 
 %option c++
 %option yyclass="Lexer"
 %option noyywrap
-%option outfile="flex_lexer.cc"
+%option yylineno
 
-blank      [ \t]
+blank      [ \t\r]
 identifier [a-zA-Z_][a-zA-Z_0-9]*
 numeric    [0-9]+(\.[0-9][0-9]?)?
 
 %%
 
 {blank}+  /* skip whitespace */
+
+\n  /* skip newlines: without an explicit rule flex's default action echoes them */
 
 "def"    return token::DEF;
 "extern" return token::EXTERN;
@@ -38,7 +43,7 @@ numeric    [0-9]+(\.[0-9][0-9]?)?
 ";" return token::STATEMENT_END;
 "," return token::COMMA;
 
-"=" return token::ASSIGNMENT;
+"=" { yylval->chr = *yytext; return token::ASSIGNMENT; }
 
 "*" { yylval->chr = *yytext; return token::MULTIPLY; }
 "/" { yylval->chr = *yytext; return token::DIVIDE; }
@@ -60,8 +65,8 @@ numeric    [0-9]+(\.[0-9][0-9]?)?
 "#" BEGIN(COMMENT);
 
 <COMMENT>{
-    [^\n]+  // eat eat eat
-    \n   { yylineno++; BEGIN(INITIAL); }
+    [^\n]+  /* eat the comment body */
+    \n      BEGIN(INITIAL);   /* %option yylineno maintains yylineno for us */
 }
 
 .	printf("bad input character '%s' at line %d\n", yytext, yylineno);

@@ -24,13 +24,15 @@ STree::~STree() {
 
 void
 STree::parse(std::istream &input) {
-    root.release();
+    // Drop the previous tree instead of leaking it.
+    root.reset();
 
-    Lexer lexer = Lexer(&input);
-    bison::Parser *parser = new bison::Parser(lexer,
-                                              *this);
+    Lexer lexer(&input);
+    // Own the parser by value: it was previously heap-allocated and never
+    // freed, leaking one parser per statement.
+    bison::Parser parser(lexer, *this);
 
-    parser->parse();
+    parser.parse();
 }
 
 void
