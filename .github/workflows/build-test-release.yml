@@ -44,6 +44,10 @@ jobs:
             # Use brew --prefix to get correct path regardless of architecture
             export CMAKE_PREFIX_PATH=$(brew --prefix llvm@20)
             export PATH="$(brew --prefix bison)/bin:$PATH"
+          else
+            # apt.llvm.org installs LLVM 20 under /usr/lib/llvm-20, which is not
+            # on CMake's default search path, so find_package(LLVM) needs the hint.
+            export CMAKE_PREFIX_PATH="$(llvm-config-20 --prefix 2>/dev/null || echo /usr/lib/llvm-20)"
           fi
           mkdir build
           cd build
@@ -54,35 +58,51 @@ jobs:
           cd build
           make -j4
 
+      # kscope always exits 0, even when a statement fails to compile, so these
+      # steps have to assert on the output. Running the binary alone proves
+      # nothing -- a broken codegen path would still "pass".
       - name: Test - Define Function
         run: |
           cd build
-          echo "def foo(a, b) a + b;" | ./src/kscope
+          output=$(echo "def foo(a, b) a + b;" | ./src/kscope 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "Read foo definition"
 
       - name: Test - Call Function
         run: |
           cd build
-          echo -e "def foo(a, b) a + b;\nfoo(4, 5);" | ./src/kscope
+          output=$(echo -e "def foo(a, b) a + b;\nfoo(4, 5);" | ./src/kscope 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "Evaluated to: 9.000000"
 
       - name: Test - Use Variables
         run: |
           cd build
-          echo "def bar(a) var x = a in x * x;" | ./src/kscope
+          # "Read ... definition" is only printed when codegen succeeded.
+          output=$(echo "def bar(a) var x = a in x * x;" | ./src/kscope 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "Read bar definition"
 
       - name: Test - Conditional Statement
         run: |
           cd build
-          echo "def max(a, b) if a < b then b else a;" | ./src/kscope
+          output=$(echo -e "def max(a, b) if a < b then b else a;\nmax(3, 7);" | ./src/kscope 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "Evaluated to: 7.000000"
 
       - name: Test - Loop
         run: |
           cd build
-          echo -e "def test(n) for i = 1, n+1, 1 in i * i;\ntest(5);" | ./src/kscope
+          output=$(echo -e "def test(n) for i = 1, n+1, 1 in i * i;\ntest(5);" | ./src/kscope 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "Read test definition"
 
       - name: Test - External Function Call
         run: |
           cd build
-          echo -e "extern printd(x);\nprintd(42);" | ./src/kscope
+          output=$(echo -e "extern printd(x);\nprintd(42);" | ./src/kscope 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "42.000000"
 
       - name: Package binary
         run: |
