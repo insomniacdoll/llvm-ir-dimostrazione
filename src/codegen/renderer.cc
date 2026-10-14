@@ -7,6 +7,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include <cstdlib>
@@ -29,13 +30,18 @@ IRRenderer::IRRenderer() {
     builder = std::make_unique<IRBuilder<>>(*context);
 
     auto jit_builder = llvm::orc::LLJITBuilder();
-    auto initResult = jit_builder.create();
-    if (auto err = initResult.takeError()) {
-        llvm::errs() << "Could not create LLJIT: " << err << "\n";
+    auto init_result = jit_builder.create();
+    // Check the Expected before taking the error out of it: LLVM documents an
+    // Expected as destruct-only once takeError() has been called on it, so the
+    // old "if (auto err = init_result.takeError())" followed by get() on the
+    // success path was relying on undefined behaviour.
+    if (!init_result) {
+        llvm::errs() << "Could not create LLJIT: "
+                     << llvm::toString(init_result.takeError()) << "\n";
         exit(1);
     }
 
-    engine = std::move(initResult.get());
+    engine = std::move(*init_result);
 }
 
 IRRenderer::IRRenderer(IRRenderer &&other) {
@@ -43,6 +49,10 @@ IRRenderer::IRRenderer(IRRenderer &&other) {
     module = std::move(other.module);
     engine = std::move(other.engine);
     builder = std::move(other.builder);
+    // The name bindings are part of the renderer's state: leaving these out
+    // made a moved-to renderer look healthy while having lost every variable.
+    named_values = std::move(other.named_values);
+    function_arg_counts = std::move(other.function_arg_counts);
 }
 
 IRRenderer::~IRRenderer() {
@@ -98,13 +108,23 @@ IRRenderer::declare_external_function(const std::string &name) {
         false
     );
 
-    // Create or get the function with ExternalLinkage (external function)
-    Function::Create(
-        func_type,
-        Function::ExternalLinkage,
-        name,
-        module.get()
-    );
+    // Create or get the function with ExternalLinkage (external function).
+    // Function::Create would silently rename a second attempt to "name.1", so
+    // reuse an existing declaration instead.
+    if (module->getFunction(name) == nullptr) {
+        Function::Create(
+            func_type,
+            Function::ExternalLinkage,
+            name,
+            module.get()
+        );
+    }
+
+    // Record the signature: once this module is handed to the JIT and replaced
+    // by a fresh one, get_function() can only rebuild a declaration for a
+    // JIT-resident symbol if it knows the parameter count. Without this,
+    // external functions were uncallable until the user typed an "extern".
+    add_function_type(name, func_type);
 }
 
 Function *

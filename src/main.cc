@@ -56,6 +56,13 @@ int main() {
         exit(1);
     }
 
+    // Declare the externs in the initial module as well, so they can be called
+    // by the very first statement. Previously they were only declared after the
+    // first anonymous expression had swapped the module out, so `printd(42);`
+    // typed first failed with "Unknown function referenced".
+    renderer->declare_external_function("putchard");
+    renderer->declare_external_function("printd");
+
     STree *tree = new STree();
 
     std::string input;
