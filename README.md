@@ -198,7 +198,24 @@ The project uses the following compiler flags:
 - `-std=c++17`: C++17 standard
 - `-Wall -Wextra`: Enable extra warnings
 - `-fvisibility-inlines-hidden`: Hide inline function symbols
-- `-stdlib=libc++`: Use libc++ standard library
+
+These are applied with `add_compile_options()`, so they are appended to whatever
+you pass in `CMAKE_CXX_FLAGS` rather than replacing it.
+
+### Build Type
+
+The build defaults to `Debug`, which keeps LLVM's internal assertions enabled.
+Override it when you want an optimised binary:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+### Generated Sources
+
+Bison and Flex output (`bison_parser.cc`, `bison_parser.hh`, `flex_lexer.cc`,
+`stack.hh`) is written into the **build** directory, not into `src/parsing`.
+The source tree is therefore never modified by a build.
 
 ## License
 
