@@ -1,15 +1,17 @@
 # LLVM IR Generation Demo - LLVM 20 Compatible
 
-This is a modern LLVM IR generation demo program, updated to support LLVM 20 (the latest stable version).
+This is a modern LLVM IR generation demo program, built against LLVM 20.
+
+It implements a small Kaleidoscope-style language: a bison/flex front end builds
+an AST, the AST generates LLVM IR, and anonymous expressions are JIT-compiled and
+executed with ORC.
 
 ## Major Changes
 
 - Updated CMakeLists.txt to use modern CMake syntax and LLVM 20
 - Updated all LLVM API calls to be compatible with LLVM 20
 - Replaced deprecated ExecutionEngine with modern ORC JIT
-- Removed legacy::FunctionPassManager, using the new PassManager system
 - Fixed migration from SequentialType to PointerType (LLVM 20 uses opaque pointers)
-- Fixed CloneModule API changes
 - Fixed LLJIT lookup API changes
 - Updated bison grammar to support bison 3.8+
 - Fixed all deprecated API calls
@@ -30,7 +32,9 @@ This is a modern LLVM IR generation demo program, updated to support LLVM 20 (th
 # Install LLVM 20
 brew install llvm@20
 
-# Install Bison (if system version is too old)
+# Install Bison: the system one on macOS is 2.3, too old for this grammar
+# (it requires >= 3.0). Installing is not enough on its own -- step 1 has to
+# put Homebrew's bison first on PATH, or CMake picks up /usr/bin/bison.
 brew install bison
 
 # Install Flex (if not installed)
@@ -90,6 +94,9 @@ make -j4
 
 ## Usage Examples
 
+Statements are separated by `;` and `#` starts a comment that runs to the end of
+the line. Every value is an IEEE double.
+
 ### Define Function
 
 ```
@@ -100,6 +107,7 @@ ready> def foo(a, b) a + b;
 
 ```
 ready> foo(4, 5);
+Evaluated to: 9.000000
 ```
 
 ### Use Variables
@@ -107,6 +115,19 @@ ready> foo(4, 5);
 ```
 ready> def bar(a) var x = a in x * x;
 ```
+
+Bindings are mutable, so `=` also works as an expression:
+
+```
+ready> def bump(a) var x = a in x = x + 1;
+ready> bump(41);
+Evaluated to: 42.000000
+```
+
+### Operators
+
+`+`, `-`, `*` and `/`, plus the comparisons `<` and `>`, which yield 1.0 or 0.0.
+Literals may carry any number of decimal places (`3.14159`).
 
 ### Conditional Statement
 
@@ -119,7 +140,13 @@ ready> def max(a, b) if a < b then b else a;
 ```
 ready> def test(n) for i = 1, n+1, 1 in i * i;
 ready> test(5);
+Evaluated to: 0.000000
 ```
+
+The form is `for <var> = <start>, <end>[, <step>] in <body>`, and `<end>` is
+exclusive — `for i = 1, 4, 1` visits 1, 2 and 3. A `for` expression always
+evaluates to 0.0: the body runs for its side effects and its value is discarded,
+so call `printd` inside it to observe the iterations.
 
 ### External Function Call
 
@@ -127,6 +154,17 @@ ready> test(5);
 ready> extern printd(x);
 ready> printd(42);
 ```
+
+`printd` and `putchard` are registered with the JIT, so the `extern` line is
+optional for them.
+
+### Exiting
+
+```
+ready> quit;
+```
+
+`exit` works as well; both are case-insensitive.
 
 ## Environment Variables Explanation
 
@@ -158,20 +196,24 @@ bison --version
 # If version is too old, install a new version
 brew install bison  # macOS
 sudo apt-get install bison  # Linux
+
+# On macOS that is not sufficient by itself: /usr/bin/bison is still 2.3, so
+# Homebrew's copy must come first on PATH before configuring:
+export PATH="$(brew --prefix bison)/bin:$PATH"
 ```
 
 ### Link Errors
 
-If you encounter link errors, ensure the LLVM library path is correct:
+CMake locates LLVM through `find_package(LLVM REQUIRED CONFIG)`, so export
+`CMAKE_PREFIX_PATH` (see step 1) rather than `LDFLAGS`/`CPPFLAGS` — CMake does
+not read those for this lookup.
 
 ```bash
 # macOS (use brew --prefix for correct path)
-export LDFLAGS="-L$(brew --prefix llvm@20)/lib"
-export CPPFLAGS="-I$(brew --prefix llvm@20)/include"
+export CMAKE_PREFIX_PATH="$(brew --prefix llvm@20)"
 
 # Linux
-export LDFLAGS="-L/usr/lib/llvm-20/lib"
-export CPPFLAGS="-I/usr/lib/llvm-20/include"
+export CMAKE_PREFIX_PATH="$(llvm-config-20 --prefix)"
 ```
 
 ## Technical Details
@@ -185,13 +227,16 @@ The project uses GitHub Actions to build and release binaries for the following 
 
 Releases are automatically created when a version tag (e.g., `v0.1`, `v1.0.0`) is pushed to the repository.
 
-### LLVM API Changes
+### LLVM API Notes
 
-1. **ExecutionEngine → ORC JIT**: The old ExecutionEngine has been replaced by ORC JIT
-2. **legacy::FunctionPassManager**: Has been replaced by the new PassManager system
-3. **SequentialType**: LLVM 20 uses opaque pointers, requiring the use of PointerType
-4. **CloneModule**: Return value changed from raw pointer to unique_ptr
-5. **LLJIT lookup**: Uses ExecutorAddr instead of raw pointers
+These are the LLVM 20 APIs this code actually uses:
+
+1. **ExecutionEngine → ORC JIT**: The old ExecutionEngine has been replaced by
+   `llvm::orc::LLJIT`.
+2. **LLJIT lookup**: `lookup()` yields an `ExecutorAddr` rather than a raw pointer.
+3. **Opaque pointers**: LLVM 20 has no typed pointers, so a load states its type
+   explicitly (`CreateLoad(Ty, Ptr, ...)`) and allocas are queried through
+   `getAllocatedType()`.
 
 ### Compiler Flags
 
